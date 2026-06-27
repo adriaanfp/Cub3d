@@ -13,6 +13,53 @@
 #include "cub3d.h"
 
 /*
+** my_mlx_pixel_put - Pone un pixel en la imagen
+** @data: Estructura principal del juego
+** @x: Coordenada X
+** @y: Coordenada Y
+** @color: Color del pixel
+*/
+static void	my_mlx_pixel_put(t_data *data, int x, int y, int color)
+{
+	char	*dst;
+
+	dst = data->img_data + (y * data->line_length + x
+			* (data->bits_per_pixel / 8));
+	*(unsigned int *)dst = color;
+}
+
+/*
+** render_frame - Renderiza un frame completo
+** @data: Estructura principal del juego
+**
+** Pinta el techo y el suelo con los colores configurados
+**
+** Return: 0 siempre
+*/
+int	render_frame(t_data *data)
+{
+	int	x;
+	int	y;
+
+	y = 0;
+	while (y < WIN_HEIGHT)
+	{
+		x = 0;
+		while (x < WIN_WIDTH)
+		{
+			if (y < WIN_HEIGHT / 2)
+				my_mlx_pixel_put(data, x, y, data->map.ceiling_color);
+			else
+				my_mlx_pixel_put(data, x, y, data->map.floor_color);
+			x++;
+		}
+		y++;
+	}
+	mlx_put_image_to_window(data->mlx_ptr, data->win_ptr, data->img_ptr, 0, 0);
+	return (0);
+}
+
+/*
 ** close_window - Función unificada para cerrar el juego limpiamente
 ** @data: Puntero a la estructura principal que contiene mlx_ptr y win_ptr
 **
@@ -26,6 +73,8 @@
 */
 int	close_window(t_data *data)
 {
+	if (data->img_ptr != NULL)
+		mlx_destroy_image(data->mlx_ptr, data->img_ptr);
 	if (data->win_ptr != NULL)
 		mlx_destroy_window(data->mlx_ptr, data->win_ptr);
 	if (data->mlx_ptr != NULL)
@@ -84,8 +133,20 @@ int	main(int argc, char **argv)
 		free_map(&data.map);
 		return (1);
 	}
+	data.img_ptr = mlx_new_image(data.mlx_ptr, WIN_WIDTH, WIN_HEIGHT);
+	if (!data.img_ptr)
+	{
+		mlx_destroy_window(data.mlx_ptr, data.win_ptr);
+		mlx_destroy_display(data.mlx_ptr);
+		free(data.mlx_ptr);
+		free_map(&data.map);
+		return (1);
+	}
+	data.img_data = mlx_get_data_addr(data.img_ptr, &data.bits_per_pixel,
+			&data.line_length, &data.endian);
 	mlx_hook(data.win_ptr, DESTROY_NOTIFY, NO_EVENT_MASK, close_window, &data);
 	mlx_key_hook(data.win_ptr, key_hook, &data);
+	mlx_loop_hook(data.mlx_ptr, render_frame, &data);
 	mlx_loop(data.mlx_ptr);
 	return (0);
 }

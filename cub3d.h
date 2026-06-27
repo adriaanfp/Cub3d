@@ -46,12 +46,18 @@ typedef struct s_data
 {
 	void	*mlx_ptr;
 	void	*win_ptr;
+	void	*img_ptr;
+	char	*img_data;
+	int		bits_per_pixel;
+	int		line_length;
+	int		endian;
 	t_map	map;
 }	t_data;
 
 /* Funciones de cierre y eventos */
 int		close_window(t_data *data);
 int		key_hook(int keycode, t_data *data);
+int		render_frame(t_data *data);
 
 /* Funciones de parsing */
 int		parse_file(char *filename, t_data *data);
