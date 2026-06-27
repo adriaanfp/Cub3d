@@ -15,14 +15,16 @@
 
 # include <stdlib.h>
 # include <unistd.h>
+# include <X11/keysym.h>
 # include "./minilibx/mlx.h"
 
 # define WIN_WIDTH 640
 # define WIN_HEIGHT 480
 # define WIN_TITLE "Cub3D"
 
-# define ESC_KEY 65307
+# define ESC_KEY XK_Escape
 # define DESTROY_NOTIFY 17
+# define NO_EVENT_MASK 0
 
 typedef struct s_data
 {
