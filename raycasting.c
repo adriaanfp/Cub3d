@@ -50,6 +50,7 @@ static int	perform_dda(t_data *data, int *map_x, int *map_y,
 static void	init_ray_params(t_data *data, double ray_dir_x, double ray_dir_y,
 	double *delta_dist_x, double *delta_dist_y)
 {
+	(void)data;
 	*delta_dist_x = (ray_dir_x == 0) ? 1e30 : (1.0 / ray_dir_x);
 	if (*delta_dist_x < 0)
 		*delta_dist_x = -*delta_dist_x;
