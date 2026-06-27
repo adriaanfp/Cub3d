@@ -13,7 +13,10 @@
 #include "cub3d.h"
 
 /* Prototipos de funciones estáticas */
-static void	update_movement(t_data *data);
+static void		update_movement(t_data *data);
+static int		get_texture_color(t_texture *tex, int x, int y);
+static t_texture	*select_texture(t_data *data, int side, double ray_dir_x,
+					double ray_dir_y);
 
 /*
 ** my_mlx_pixel_put - Pone un pixel en la imagen
@@ -101,11 +104,11 @@ static int	perform_dda(t_data *data, int *map_x, int *map_y,
 ** cast_ray - Lanza un rayo y calcula la distancia al muro
 ** @data: Estructura principal del juego
 ** @x: Columna de la pantalla
-** @side: Puntero para almacenar el lado del muro golpeado
+** @params: Array para almacenar [side, wall_x, ray_dir_x, ray_dir_y]
 **
 ** Return: Distancia perpendicular al muro
 */
-static double	cast_ray(t_data *data, int x, int *side)
+static double	cast_ray(t_data *data, int x, double *params)
 {
 	double	ray_dir_x;
 	double	ray_dir_y;
@@ -118,6 +121,7 @@ static double	cast_ray(t_data *data, int x, int *side)
 	int		step_x;
 	int		step_y;
 	double	perp_wall_dist;
+	double	wall_x;
 
 	calculate_ray_direction(data, x, &ray_dir_x, &ray_dir_y);
 	map_x = (int)data->pos_x;
@@ -148,36 +152,102 @@ static double	cast_ray(t_data *data, int x, int *side)
 		step_y = 1;
 		side_dist_y = (map_y + 1.0 - data->pos_y) * delta_dist_y;
 	}
-	*side = perform_dda(data, &map_x, &map_y, step_x, step_y,
+	params[0] = perform_dda(data, &map_x, &map_y, step_x, step_y,
 			&side_dist_x, &side_dist_y, delta_dist_x, delta_dist_y);
-	if (*side == 0)
+	if ((int)params[0] == 0)
 		perp_wall_dist = (map_x - data->pos_x + (1 - step_x) / 2) / ray_dir_x;
 	else
 		perp_wall_dist = (map_y - data->pos_y + (1 - step_y) / 2) / ray_dir_y;
+	if ((int)params[0] == 0)
+		wall_x = data->pos_y + perp_wall_dist * ray_dir_y;
+	else
+		wall_x = data->pos_x + perp_wall_dist * ray_dir_x;
+	wall_x -= (int)wall_x;
+	params[1] = wall_x;
+	params[2] = ray_dir_x;
+	params[3] = ray_dir_y;
 	return (perp_wall_dist);
 }
 
 /*
-** draw_wall_column - Dibuja una columna vertical del muro
+** get_texture_color - Obtiene el color de un píxel de la textura
+** @tex: Textura de la que extraer el color
+** @x: Coordenada X en la textura
+** @y: Coordenada Y en la textura
+**
+** Return: Color del píxel
+*/
+static int	get_texture_color(t_texture *tex, int x, int y)
+{
+	char	*pixel;
+
+	if (x < 0 || x >= tex->width || y < 0 || y >= tex->height)
+		return (0);
+	pixel = tex->addr + (y * tex->line_length + x
+			* (tex->bits_per_pixel / 8));
+	return (*(unsigned int *)pixel);
+}
+
+/*
+** select_texture - Selecciona la textura correcta según la orientación
+** @data: Estructura principal del juego
+** @side: Lado del muro (0 = vertical, 1 = horizontal)
+** @ray_dir_x: Dirección X del rayo
+** @ray_dir_y: Dirección Y del rayo
+**
+** Return: Puntero a la textura seleccionada
+*/
+static t_texture	*select_texture(t_data *data, int side, double ray_dir_x,
+	double ray_dir_y)
+{
+	if (side == 0)
+	{
+		if (ray_dir_x > 0)
+			return (&data->tex_ea);
+		else
+			return (&data->tex_we);
+	}
+	else
+	{
+		if (ray_dir_y > 0)
+			return (&data->tex_so);
+		else
+			return (&data->tex_no);
+	}
+}
+
+/*
+** draw_wall_column - Dibuja una columna vertical del muro con textura
 ** @data: Estructura principal del juego
 ** @x: Columna de la pantalla
 ** @draw_start: Píxel de inicio
 ** @draw_end: Píxel de fin
-** @side: Lado del muro (0 = vertical, 1 = horizontal)
+** @params: Array con [side, line_height, wall_x, ray_dir_x, ray_dir_y]
 */
 static void	draw_wall_column(t_data *data, int x, int draw_start,
-	int draw_end, int side)
+	int draw_end, double *params)
 {
-	int	y;
-	int	color;
+	int			y;
+	int			tex_x;
+	int			tex_y;
+	double		step;
+	double		tex_pos;
+	t_texture	*tex;
+	int			color;
 
-	if (side == 0)
-		color = 0x808080;
-	else
-		color = 0x606060;
+	tex = select_texture(data, (int)params[0], params[3], params[4]);
+	tex_x = (int)(params[2] * (double)tex->width);
+	if ((params[0] == 0 && params[3] > 0)
+		|| (params[0] == 1 && params[4] < 0))
+		tex_x = tex->width - tex_x - 1;
+	step = 1.0 * tex->height / params[1];
+	tex_pos = (draw_start - WIN_HEIGHT / 2 + params[1] / 2) * step;
 	y = draw_start;
 	while (y < draw_end)
 	{
+		tex_y = (int)tex_pos & (tex->height - 1);
+		tex_pos += step;
+		color = get_texture_color(tex, tex_x, tex_y);
 		my_mlx_pixel_put(data, x, y, color);
 		y++;
 	}
@@ -199,7 +269,7 @@ int	render_frame(t_data *data)
 	int		line_height;
 	int		draw_start;
 	int		draw_end;
-	int		side;
+	double	params[5];
 
 	update_movement(data);
 	y = 0;
@@ -219,7 +289,7 @@ int	render_frame(t_data *data)
 	x = 0;
 	while (x < WIN_WIDTH)
 	{
-		perp_wall_dist = cast_ray(data, x, &side);
+		perp_wall_dist = cast_ray(data, x, params);
 		line_height = (int)(WIN_HEIGHT / perp_wall_dist);
 		draw_start = -line_height / 2 + WIN_HEIGHT / 2;
 		if (draw_start < 0)
@@ -227,7 +297,8 @@ int	render_frame(t_data *data)
 		draw_end = line_height / 2 + WIN_HEIGHT / 2;
 		if (draw_end >= WIN_HEIGHT)
 			draw_end = WIN_HEIGHT - 1;
-		draw_wall_column(data, x, draw_start, draw_end, side);
+		params[4] = line_height;
+		draw_wall_column(data, x, draw_start, draw_end, params);
 		x++;
 	}
 	mlx_put_image_to_window(data->mlx_ptr, data->win_ptr, data->img_ptr, 0, 0);
@@ -246,8 +317,64 @@ int	render_frame(t_data *data)
 **
 ** Return: 0 (aunque nunca se alcanza debido a exit)
 */
+/*
+** free_textures - Libera las texturas cargadas
+** @data: Estructura principal del juego
+*/
+void	free_textures(t_data *data)
+{
+	if (data->tex_no.img != NULL)
+		mlx_destroy_image(data->mlx_ptr, data->tex_no.img);
+	if (data->tex_so.img != NULL)
+		mlx_destroy_image(data->mlx_ptr, data->tex_so.img);
+	if (data->tex_we.img != NULL)
+		mlx_destroy_image(data->mlx_ptr, data->tex_we.img);
+	if (data->tex_ea.img != NULL)
+		mlx_destroy_image(data->mlx_ptr, data->tex_ea.img);
+}
+
+/*
+** load_textures - Carga las texturas XPM
+** @data: Estructura principal del juego
+**
+** Return: 0 si es exitoso, 1 si hay error
+*/
+int	load_textures(t_data *data)
+{
+	data->tex_no.img = mlx_xpm_file_to_image(data->mlx_ptr,
+			data->map.no_texture, &data->tex_no.width, &data->tex_no.height);
+	if (!data->tex_no.img)
+		return (1);
+	data->tex_no.addr = mlx_get_data_addr(data->tex_no.img,
+			&data->tex_no.bits_per_pixel, &data->tex_no.line_length,
+			&data->tex_no.endian);
+	data->tex_so.img = mlx_xpm_file_to_image(data->mlx_ptr,
+			data->map.so_texture, &data->tex_so.width, &data->tex_so.height);
+	if (!data->tex_so.img)
+		return (1);
+	data->tex_so.addr = mlx_get_data_addr(data->tex_so.img,
+			&data->tex_so.bits_per_pixel, &data->tex_so.line_length,
+			&data->tex_so.endian);
+	data->tex_we.img = mlx_xpm_file_to_image(data->mlx_ptr,
+			data->map.we_texture, &data->tex_we.width, &data->tex_we.height);
+	if (!data->tex_we.img)
+		return (1);
+	data->tex_we.addr = mlx_get_data_addr(data->tex_we.img,
+			&data->tex_we.bits_per_pixel, &data->tex_we.line_length,
+			&data->tex_we.endian);
+	data->tex_ea.img = mlx_xpm_file_to_image(data->mlx_ptr,
+			data->map.ea_texture, &data->tex_ea.width, &data->tex_ea.height);
+	if (!data->tex_ea.img)
+		return (1);
+	data->tex_ea.addr = mlx_get_data_addr(data->tex_ea.img,
+			&data->tex_ea.bits_per_pixel, &data->tex_ea.line_length,
+			&data->tex_ea.endian);
+	return (0);
+}
+
 int	close_window(t_data *data)
 {
+	free_textures(data);
 	if (data->img_ptr != NULL)
 		mlx_destroy_image(data->mlx_ptr, data->img_ptr);
 	if (data->win_ptr != NULL)
@@ -450,6 +577,16 @@ int	main(int argc, char **argv)
 	}
 	data.img_data = mlx_get_data_addr(data.img_ptr, &data.bits_per_pixel,
 			&data.line_length, &data.endian);
+	if (load_textures(&data))
+	{
+		print_error("Error al cargar las texturas");
+		mlx_destroy_image(data.mlx_ptr, data.img_ptr);
+		mlx_destroy_window(data.mlx_ptr, data.win_ptr);
+		mlx_destroy_display(data.mlx_ptr);
+		free(data.mlx_ptr);
+		free_map(&data.map);
+		return (1);
+	}
 	mlx_hook(data.win_ptr, DESTROY_NOTIFY, NO_EVENT_MASK, close_window, &data);
 	mlx_hook(data.win_ptr, KEY_PRESS, 1L << 0, key_press, &data);
 	mlx_hook(data.win_ptr, KEY_RELEASE, 1L << 1, key_release, &data);
