@@ -12,6 +12,9 @@
 
 #include "cub3d.h"
 
+/* Prototipos de funciones estáticas */
+static void	update_movement(t_data *data);
+
 /*
 ** my_mlx_pixel_put - Pone un pixel en la imagen
 ** @data: Estructura principal del juego
