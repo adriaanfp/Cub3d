@@ -20,7 +20,7 @@
 # include <string.h>
 # include <math.h>
 # include <X11/keysym.h>
-# include "./minilibx/mlx.h"
+# include "mlx.h"
 
 # define WIN_WIDTH 640
 # define WIN_HEIGHT 480
