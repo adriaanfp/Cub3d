@@ -20,7 +20,7 @@
 # include <string.h>
 # include <math.h>
 # include <X11/keysym.h>
-# include "../minilibx/mlx.h"
+# include "./minilibx/mlx.h"
 
 # define WIN_WIDTH 640
 # define WIN_HEIGHT 480
@@ -97,7 +97,7 @@ typedef struct s_data
 	int			key_right;
 }	t_data;
 
-/* Funciones principales */
+/* Funciones de cierre y eventos */
 int		close_window(t_data *data);
 int		key_press(int keycode, t_data *data);
 int		key_release(int keycode, t_data *data);
@@ -112,6 +112,34 @@ int		parse_file(char *filename, t_data *data);
 void	free_map(t_map *map);
 void	print_error(char *message);
 int		init_player(t_data *data);
+int		check_file_extension(char *filename);
+void	init_map(t_map *map);
+int		is_map_line(char *line);
+int		parse_texture(char *line, t_map *map);
+int		parse_color(char *line, t_map *map);
+int		parse_line(char *line, t_map *map);
+int		read_map_grid(int fd, t_map *map, char *first_line);
+int		check_map_walls(t_map *map);
+int		validate_config(t_map *map);
+
+/* Funciones de movimiento */
+void	move_forward_backward(t_data *data, int direction);
+void	move_strafe(t_data *data, int direction);
+void	rotate_camera(t_data *data, int direction);
+void	update_movement(t_data *data);
+
+/* Funciones de renderizado */
+void	my_mlx_pixel_put(t_data *data, int x, int y, int color);
+int		get_texture_color(t_texture *tex, int x, int y);
+t_texture	*select_texture(t_data *data, int side, double ray_dir_x,
+				double ray_dir_y);
+void	draw_background(t_data *data);
+void	calculate_ray_direction(t_data *data, int x,
+			double *ray_dir_x, double *ray_dir_y);
+void	draw_wall_column(t_data *data, int x, int draw_start,
+			int draw_end, double *params);
+void	render_walls(t_data *data);
+double	cast_ray(t_data *data, int x, double *params);
 
 /* Funciones auxiliares de string */
 int		ft_strlen(char *str);
