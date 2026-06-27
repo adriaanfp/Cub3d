@@ -13,7 +13,7 @@
 NAME		= cub3D
 
 CC			= cc
-CFLAGS		= -Wall -Wextra -Werror
+CFLAGS		= -Wall -Wextra -Werror -std=gnu17
 INCLUDES	= -I. -I./minilibx
 
 SRCS		= main.c
