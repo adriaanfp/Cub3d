@@ -63,7 +63,7 @@ void	free_map(t_map *map)
 **
 ** Return: 1 si es válido, 0 si no
 */
-static int	check_file_extension(char *filename)
+int	check_file_extension(char *filename)
 {
 	int	len;
 
@@ -82,7 +82,7 @@ static int	check_file_extension(char *filename)
 ** init_map - Inicializa la estructura del mapa con valores por defecto
 ** @map: Puntero a la estructura del mapa
 */
-static void	init_map(t_map *map)
+void	init_map(t_map *map)
 {
 	map->no_texture = NULL;
 	map->so_texture = NULL;
@@ -102,7 +102,7 @@ static void	init_map(t_map *map)
 **
 ** Return: 0 si es exitoso, 1 si hay error
 */
-static int	parse_texture(char *line, t_map *map)
+int	parse_texture(char *line, t_map *map)
 {
 	char	*path;
 	int		i;
@@ -174,7 +174,7 @@ static int	parse_color_value(char *str)
 **
 ** Return: 0 si es exitoso, 1 si hay error
 */
-static int	parse_color(char *line, t_map *map)
+int	parse_color(char *line, t_map *map)
 {
 	char	*color_str;
 	int		color;
@@ -205,7 +205,7 @@ static int	parse_color(char *line, t_map *map)
 **
 ** Return: 1 si es línea de mapa, 0 si no
 */
-static int	is_map_line(char *line)
+int	is_map_line(char *line)
 {
 	int	i;
 
@@ -230,7 +230,7 @@ static int	is_map_line(char *line)
 **
 ** Return: 0 si es exitoso, 1 si hay error
 */
-static int	read_map_grid(int fd, t_map *map, char *first_line)
+int	read_map_grid(int fd, t_map *map, char *first_line)
 {
 	char	*line;
 	char	**temp_grid;
@@ -286,7 +286,7 @@ static int	read_map_grid(int fd, t_map *map, char *first_line)
 **
 ** Return: 0 si es exitoso, 1 si hay error, 2 si es línea de mapa
 */
-static int	parse_line(char *line, t_map *map)
+int	parse_line(char *line, t_map *map)
 {
 	char	*trimmed;
 	int		result;
@@ -431,7 +431,7 @@ static int	is_valid_map_char(char c)
 **
 ** Return: 0 si es válido, 1 si hay error
 */
-static int	check_map_walls(t_map *map)
+int	check_map_walls(t_map *map)
 {
 	int	y;
 	int	x;
@@ -482,7 +482,7 @@ static int	check_map_walls(t_map *map)
 **
 ** Return: 0 si es válido, 1 si falta algo
 */
-static int	validate_config(t_map *map)
+int	validate_config(t_map *map)
 {
 	if (!map->no_texture || !map->so_texture
 		|| !map->we_texture || !map->ea_texture)
