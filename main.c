@@ -236,7 +236,13 @@ static void	draw_wall_column(t_data *data, int x, int draw_start,
 	int			color;
 
 	tex = select_texture(data, (int)params[0], params[3], params[4]);
+	if (!tex || !tex->addr)
+		return ;
 	tex_x = (int)(params[2] * (double)tex->width);
+	if (tex_x < 0)
+		tex_x = 0;
+	if (tex_x >= tex->width)
+		tex_x = tex->width - 1;
 	if ((params[0] == 0 && params[3] > 0)
 		|| (params[0] == 1 && params[4] < 0))
 		tex_x = tex->width - tex_x - 1;
@@ -245,10 +251,15 @@ static void	draw_wall_column(t_data *data, int x, int draw_start,
 	y = draw_start;
 	while (y < draw_end)
 	{
-		tex_y = (int)tex_pos & (tex->height - 1);
+		tex_y = (int)tex_pos;
+		if (tex_y < 0)
+			tex_y = 0;
+		if (tex_y >= tex->height)
+			tex_y = tex->height - 1;
 		tex_pos += step;
 		color = get_texture_color(tex, tex_x, tex_y);
-		my_mlx_pixel_put(data, x, y, color);
+		if (color != 0)
+			my_mlx_pixel_put(data, x, y, color);
 		y++;
 	}
 }
@@ -323,14 +334,17 @@ int	render_frame(t_data *data)
 */
 void	free_textures(t_data *data)
 {
-	if (data->tex_no.img != NULL)
-		mlx_destroy_image(data->mlx_ptr, data->tex_no.img);
-	if (data->tex_so.img != NULL)
-		mlx_destroy_image(data->mlx_ptr, data->tex_so.img);
-	if (data->tex_we.img != NULL)
-		mlx_destroy_image(data->mlx_ptr, data->tex_we.img);
-	if (data->tex_ea.img != NULL)
-		mlx_destroy_image(data->mlx_ptr, data->tex_ea.img);
+	if (data->mlx_ptr)
+	{
+		if (data->tex_no.img != NULL)
+			mlx_destroy_image(data->mlx_ptr, data->tex_no.img);
+		if (data->tex_so.img != NULL)
+			mlx_destroy_image(data->mlx_ptr, data->tex_so.img);
+		if (data->tex_we.img != NULL)
+			mlx_destroy_image(data->mlx_ptr, data->tex_we.img);
+		if (data->tex_ea.img != NULL)
+			mlx_destroy_image(data->mlx_ptr, data->tex_ea.img);
+	}
 }
 
 /*
@@ -374,13 +388,13 @@ int	load_textures(t_data *data)
 
 int	close_window(t_data *data)
 {
-	free_textures(data);
-	if (data->img_ptr != NULL)
-		mlx_destroy_image(data->mlx_ptr, data->img_ptr);
-	if (data->win_ptr != NULL)
-		mlx_destroy_window(data->mlx_ptr, data->win_ptr);
-	if (data->mlx_ptr != NULL)
+	if (data->mlx_ptr)
 	{
+		free_textures(data);
+		if (data->img_ptr != NULL)
+			mlx_destroy_image(data->mlx_ptr, data->img_ptr);
+		if (data->win_ptr != NULL)
+			mlx_destroy_window(data->mlx_ptr, data->win_ptr);
 		mlx_destroy_display(data->mlx_ptr);
 		free(data->mlx_ptr);
 	}
