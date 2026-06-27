@@ -198,6 +198,7 @@ int	render_frame(t_data *data)
 	int		draw_end;
 	int		side;
 
+	update_movement(data);
 	y = 0;
 	while (y < WIN_HEIGHT)
 	{
@@ -259,18 +260,144 @@ int	close_window(t_data *data)
 }
 
 /*
-** key_hook - Manejador de eventos de teclado
+** move_forward_backward - Mueve al jugador hacia adelante o atrás
+** @data: Estructura principal del juego
+** @direction: 1 para adelante, -1 para atrás
+*/
+static void	move_forward_backward(t_data *data, int direction)
+{
+	double	new_x;
+	double	new_y;
+
+	new_x = data->pos_x + data->dir_x * MOVE_SPEED * direction;
+	new_y = data->pos_y + data->dir_y * MOVE_SPEED * direction;
+	if ((int)new_x >= 0 && (int)new_x < data->map.width
+		&& (int)new_y >= 0 && (int)new_y < data->map.height)
+	{
+		if (data->map.grid[(int)new_y][(int)new_x] != '1')
+		{
+			data->pos_x = new_x;
+			data->pos_y = new_y;
+		}
+	}
+}
+
+/*
+** move_strafe - Mueve al jugador lateralmente (strafe)
+** @data: Estructura principal del juego
+** @direction: 1 para derecha, -1 para izquierda
+*/
+static void	move_strafe(t_data *data, int direction)
+{
+	double	new_x;
+	double	new_y;
+	double	strafe_x;
+	double	strafe_y;
+
+	strafe_x = data->plane_x;
+	strafe_y = data->plane_y;
+	new_x = data->pos_x + strafe_x * MOVE_SPEED * direction;
+	new_y = data->pos_y + strafe_y * MOVE_SPEED * direction;
+	if ((int)new_x >= 0 && (int)new_x < data->map.width
+		&& (int)new_y >= 0 && (int)new_y < data->map.height)
+	{
+		if (data->map.grid[(int)new_y][(int)new_x] != '1')
+		{
+			data->pos_x = new_x;
+			data->pos_y = new_y;
+		}
+	}
+}
+
+/*
+** rotate_camera - Rota la cámara del jugador
+** @data: Estructura principal del juego
+** @direction: 1 para derecha, -1 para izquierda
+*/
+static void	rotate_camera(t_data *data, int direction)
+{
+	double	old_dir_x;
+	double	old_plane_x;
+	double	rot_speed;
+
+	rot_speed = ROT_SPEED * direction;
+	old_dir_x = data->dir_x;
+	data->dir_x = data->dir_x * cos(rot_speed) - data->dir_y * sin(rot_speed);
+	data->dir_y = old_dir_x * sin(rot_speed) + data->dir_y * cos(rot_speed);
+	old_plane_x = data->plane_x;
+	data->plane_x = data->plane_x * cos(rot_speed)
+		- data->plane_y * sin(rot_speed);
+	data->plane_y = old_plane_x * sin(rot_speed)
+		+ data->plane_y * cos(rot_speed);
+}
+
+/*
+** update_movement - Actualiza el movimiento del jugador según las teclas
+** @data: Estructura principal del juego
+*/
+static void	update_movement(t_data *data)
+{
+	if (data->key_w)
+		move_forward_backward(data, 1);
+	if (data->key_s)
+		move_forward_backward(data, -1);
+	if (data->key_d)
+		move_strafe(data, 1);
+	if (data->key_a)
+		move_strafe(data, -1);
+	if (data->key_left)
+		rotate_camera(data, -1);
+	if (data->key_right)
+		rotate_camera(data, 1);
+}
+
+/*
+** key_press - Manejador de eventos de tecla presionada
 ** @keycode: Código de la tecla presionada
 ** @data: Puntero a la estructura principal del juego
 **
-** Captura la tecla ESC (XK_Escape) para cerrar el juego limpiamente.
-**
 ** Return: 0 siempre
 */
-int	key_hook(int keycode, t_data *data)
+int	key_press(int keycode, t_data *data)
 {
 	if (keycode == ESC_KEY)
 		close_window(data);
+	if (keycode == W_KEY)
+		data->key_w = 1;
+	if (keycode == S_KEY)
+		data->key_s = 1;
+	if (keycode == A_KEY)
+		data->key_a = 1;
+	if (keycode == D_KEY)
+		data->key_d = 1;
+	if (keycode == LEFT_ARROW)
+		data->key_left = 1;
+	if (keycode == RIGHT_ARROW)
+		data->key_right = 1;
+	return (0);
+}
+
+/*
+** key_release - Manejador de eventos de tecla liberada
+** @keycode: Código de la tecla liberada
+** @data: Puntero a la estructura principal del juego
+**
+** Return: 0 siempre
+*/
+int	key_release(int keycode, t_data *data)
+{
+	if (keycode == W_KEY)
+		data->key_w = 0;
+	if (keycode == S_KEY)
+		data->key_s = 0;
+	if (keycode == A_KEY)
+		data->key_a = 0;
+	if (keycode == D_KEY)
+		data->key_d = 0;
+	if (keycode == LEFT_ARROW)
+		data->key_left = 0;
+	if (keycode == RIGHT_ARROW)
+		data->key_right = 0;
 	return (0);
 }
 
@@ -321,7 +448,8 @@ int	main(int argc, char **argv)
 	data.img_data = mlx_get_data_addr(data.img_ptr, &data.bits_per_pixel,
 			&data.line_length, &data.endian);
 	mlx_hook(data.win_ptr, DESTROY_NOTIFY, NO_EVENT_MASK, close_window, &data);
-	mlx_key_hook(data.win_ptr, key_hook, &data);
+	mlx_hook(data.win_ptr, KEY_PRESS, 1L << 0, key_press, &data);
+	mlx_hook(data.win_ptr, KEY_RELEASE, 1L << 1, key_release, &data);
 	mlx_loop_hook(data.mlx_ptr, render_frame, &data);
 	mlx_loop(data.mlx_ptr);
 	return (0);
