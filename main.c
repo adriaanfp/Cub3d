@@ -29,6 +29,158 @@ static void	my_mlx_pixel_put(t_data *data, int x, int y, int color)
 }
 
 /*
+** calculate_ray_direction - Calcula la dirección del rayo para una columna
+** @data: Estructura principal del juego
+** @x: Columna de la pantalla
+** @ray_dir_x: Puntero para almacenar la dirección X del rayo
+** @ray_dir_y: Puntero para almacenar la dirección Y del rayo
+*/
+static void	calculate_ray_direction(t_data *data, int x,
+	double *ray_dir_x, double *ray_dir_y)
+{
+	double	camera_x;
+
+	camera_x = 2 * x / (double)WIN_WIDTH - 1;
+	*ray_dir_x = data->dir_x + data->plane_x * camera_x;
+	*ray_dir_y = data->dir_y + data->plane_y * camera_x;
+}
+
+/*
+** perform_dda - Ejecuta el algoritmo DDA para encontrar el muro
+** @data: Estructura principal del juego
+** @map_x: Coordenada X del mapa
+** @map_y: Coordenada Y del mapa
+** @step_x: Dirección de paso en X
+** @step_y: Dirección de paso en Y
+** @side_dist_x: Distancia al siguiente lado X
+** @side_dist_y: Distancia al siguiente lado Y
+** @delta_dist_x: Distancia entre lados X
+** @delta_dist_y: Distancia entre lados Y
+**
+** Return: 0 si golpeó lado vertical, 1 si golpeó lado horizontal
+*/
+static int	perform_dda(t_data *data, int *map_x, int *map_y,
+	int step_x, int step_y, double *side_dist_x, double *side_dist_y,
+	double delta_dist_x, double delta_dist_y)
+{
+	int	hit;
+	int	side;
+
+	hit = 0;
+	side = 0;
+	while (hit == 0)
+	{
+		if (*side_dist_x < *side_dist_y)
+		{
+			*side_dist_x += delta_dist_x;
+			*map_x += step_x;
+			side = 0;
+		}
+		else
+		{
+			*side_dist_y += delta_dist_y;
+			*map_y += step_y;
+			side = 1;
+		}
+		if (*map_x >= 0 && *map_x < data->map.width
+			&& *map_y >= 0 && *map_y < data->map.height)
+		{
+			if (data->map.grid[*map_y][*map_x] == '1')
+				hit = 1;
+		}
+		else
+			hit = 1;
+	}
+	return (side);
+}
+
+/*
+** cast_ray - Lanza un rayo y calcula la distancia al muro
+** @data: Estructura principal del juego
+** @x: Columna de la pantalla
+** @side: Puntero para almacenar el lado del muro golpeado
+**
+** Return: Distancia perpendicular al muro
+*/
+static double	cast_ray(t_data *data, int x, int *side)
+{
+	double	ray_dir_x;
+	double	ray_dir_y;
+	int		map_x;
+	int		map_y;
+	double	delta_dist_x;
+	double	delta_dist_y;
+	double	side_dist_x;
+	double	side_dist_y;
+	int		step_x;
+	int		step_y;
+	double	perp_wall_dist;
+
+	calculate_ray_direction(data, x, &ray_dir_x, &ray_dir_y);
+	map_x = (int)data->pos_x;
+	map_y = (int)data->pos_y;
+	delta_dist_x = (ray_dir_x == 0) ? 1e30 : (1.0 / ray_dir_x);
+	if (delta_dist_x < 0)
+		delta_dist_x = -delta_dist_x;
+	delta_dist_y = (ray_dir_y == 0) ? 1e30 : (1.0 / ray_dir_y);
+	if (delta_dist_y < 0)
+		delta_dist_y = -delta_dist_y;
+	if (ray_dir_x < 0)
+	{
+		step_x = -1;
+		side_dist_x = (data->pos_x - map_x) * delta_dist_x;
+	}
+	else
+	{
+		step_x = 1;
+		side_dist_x = (map_x + 1.0 - data->pos_x) * delta_dist_x;
+	}
+	if (ray_dir_y < 0)
+	{
+		step_y = -1;
+		side_dist_y = (data->pos_y - map_y) * delta_dist_y;
+	}
+	else
+	{
+		step_y = 1;
+		side_dist_y = (map_y + 1.0 - data->pos_y) * delta_dist_y;
+	}
+	*side = perform_dda(data, &map_x, &map_y, step_x, step_y,
+			&side_dist_x, &side_dist_y, delta_dist_x, delta_dist_y);
+	if (*side == 0)
+		perp_wall_dist = (map_x - data->pos_x + (1 - step_x) / 2) / ray_dir_x;
+	else
+		perp_wall_dist = (map_y - data->pos_y + (1 - step_y) / 2) / ray_dir_y;
+	return (perp_wall_dist);
+}
+
+/*
+** draw_wall_column - Dibuja una columna vertical del muro
+** @data: Estructura principal del juego
+** @x: Columna de la pantalla
+** @draw_start: Píxel de inicio
+** @draw_end: Píxel de fin
+** @side: Lado del muro (0 = vertical, 1 = horizontal)
+*/
+static void	draw_wall_column(t_data *data, int x, int draw_start,
+	int draw_end, int side)
+{
+	int	y;
+	int	color;
+
+	if (side == 0)
+		color = 0x808080;
+	else
+		color = 0x606060;
+	y = draw_start;
+	while (y < draw_end)
+	{
+		my_mlx_pixel_put(data, x, y, color);
+		y++;
+	}
+}
+
+/*
 ** render_frame - Renderiza un frame completo
 ** @data: Estructura principal del juego
 **
@@ -38,8 +190,13 @@ static void	my_mlx_pixel_put(t_data *data, int x, int y, int color)
 */
 int	render_frame(t_data *data)
 {
-	int	x;
-	int	y;
+	int		x;
+	int		y;
+	double	perp_wall_dist;
+	int		line_height;
+	int		draw_start;
+	int		draw_end;
+	int		side;
 
 	y = 0;
 	while (y < WIN_HEIGHT)
@@ -54,6 +211,20 @@ int	render_frame(t_data *data)
 			x++;
 		}
 		y++;
+	}
+	x = 0;
+	while (x < WIN_WIDTH)
+	{
+		perp_wall_dist = cast_ray(data, x, &side);
+		line_height = (int)(WIN_HEIGHT / perp_wall_dist);
+		draw_start = -line_height / 2 + WIN_HEIGHT / 2;
+		if (draw_start < 0)
+			draw_start = 0;
+		draw_end = line_height / 2 + WIN_HEIGHT / 2;
+		if (draw_end >= WIN_HEIGHT)
+			draw_end = WIN_HEIGHT - 1;
+		draw_wall_column(data, x, draw_start, draw_end, side);
+		x++;
 	}
 	mlx_put_image_to_window(data->mlx_ptr, data->win_ptr, data->img_ptr, 0, 0);
 	return (0);
@@ -114,6 +285,11 @@ int	main(int argc, char **argv)
 		return (1);
 	}
 	if (parse_file(argv[1], &data))
+	{
+		free_map(&data.map);
+		return (1);
+	}
+	if (init_player(&data))
 	{
 		free_map(&data.map);
 		return (1);

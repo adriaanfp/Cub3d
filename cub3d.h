@@ -52,6 +52,12 @@ typedef struct s_data
 	int		line_length;
 	int		endian;
 	t_map	map;
+	double	pos_x;
+	double	pos_y;
+	double	dir_x;
+	double	dir_y;
+	double	plane_x;
+	double	plane_y;
 }	t_data;
 
 /* Funciones de cierre y eventos */
@@ -63,6 +69,7 @@ int		render_frame(t_data *data);
 int		parse_file(char *filename, t_data *data);
 void	free_map(t_map *map);
 void	print_error(char *message);
+int		init_player(t_data *data);
 
 /* Funciones auxiliares de string */
 int		ft_strlen(char *str);

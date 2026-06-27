@@ -307,6 +307,66 @@ static int	parse_line(char *line, t_map *map)
 }
 
 /*
+** init_player - Inicializa la posición y dirección del jugador
+** @data: Estructura principal del juego
+**
+** Return: 0 si es exitoso, 1 si no se encuentra jugador
+*/
+int	init_player(t_data *data)
+{
+	int	y;
+	int	x;
+
+	y = 0;
+	while (y < data->map.height)
+	{
+		x = 0;
+		while (data->map.grid[y][x])
+		{
+			if (data->map.grid[y][x] == 'N' || data->map.grid[y][x] == 'S'
+				|| data->map.grid[y][x] == 'E' || data->map.grid[y][x] == 'W')
+			{
+				data->pos_x = x + 0.5;
+				data->pos_y = y + 0.5;
+				if (data->map.grid[y][x] == 'N')
+				{
+					data->dir_x = 0;
+					data->dir_y = -1;
+					data->plane_x = 0.66;
+					data->plane_y = 0;
+				}
+				else if (data->map.grid[y][x] == 'S')
+				{
+					data->dir_x = 0;
+					data->dir_y = 1;
+					data->plane_x = -0.66;
+					data->plane_y = 0;
+				}
+				else if (data->map.grid[y][x] == 'E')
+				{
+					data->dir_x = 1;
+					data->dir_y = 0;
+					data->plane_x = 0;
+					data->plane_y = 0.66;
+				}
+				else if (data->map.grid[y][x] == 'W')
+				{
+					data->dir_x = -1;
+					data->dir_y = 0;
+					data->plane_x = 0;
+					data->plane_y = -0.66;
+				}
+				return (0);
+			}
+			x++;
+		}
+		y++;
+	}
+	print_error("No se encontró jugador en el mapa");
+	return (1);
+}
+
+/*
 ** validate_config - Valida que todos los elementos estén presentes
 ** @map: Estructura del mapa
 **
