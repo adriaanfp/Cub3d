@@ -33,6 +33,7 @@ int	close_window(t_data *data)
 		mlx_destroy_display(data->mlx_ptr);
 		free(data->mlx_ptr);
 	}
+	free_map(&data->map);
 	exit(0);
 	return (0);
 }
@@ -53,19 +54,33 @@ int	key_hook(int keycode, t_data *data)
 	return (0);
 }
 
-int	main(void)
+int	main(int argc, char **argv)
 {
 	t_data	data;
 
+	if (argc != 2)
+	{
+		print_error("Uso: ./cub3D <archivo.cub>");
+		return (1);
+	}
+	if (parse_file(argv[1], &data))
+	{
+		free_map(&data.map);
+		return (1);
+	}
 	data.mlx_ptr = mlx_init();
 	if (!data.mlx_ptr)
+	{
+		free_map(&data.map);
 		return (1);
+	}
 	data.win_ptr = mlx_new_window(data.mlx_ptr, WIN_WIDTH, WIN_HEIGHT,
 			WIN_TITLE);
 	if (!data.win_ptr)
 	{
 		mlx_destroy_display(data.mlx_ptr);
 		free(data.mlx_ptr);
+		free_map(&data.map);
 		return (1);
 	}
 	mlx_hook(data.win_ptr, DESTROY_NOTIFY, NO_EVENT_MASK, close_window, &data);
