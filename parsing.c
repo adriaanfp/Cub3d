@@ -36,20 +36,20 @@ void	free_map(t_map *map)
 {
 	int	i;
 
-	if (map->no_texture)
+	if (map->no_texture != NULL)
 		free(map->no_texture);
-	if (map->so_texture)
+	if (map->so_texture != NULL)
 		free(map->so_texture);
-	if (map->we_texture)
+	if (map->we_texture != NULL)
 		free(map->we_texture);
-	if (map->ea_texture)
+	if (map->ea_texture != NULL)
 		free(map->ea_texture);
-	if (map->grid)
+	if (map->grid != NULL)
 	{
 		i = 0;
 		while (i < map->height)
 		{
-			if (map->grid[i])
+			if (map->grid[i] != NULL)
 				free(map->grid[i]);
 			i++;
 		}

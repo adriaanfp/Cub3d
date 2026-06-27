@@ -26,9 +26,9 @@
 */
 int	close_window(t_data *data)
 {
-	if (data->win_ptr)
+	if (data->win_ptr != NULL)
 		mlx_destroy_window(data->mlx_ptr, data->win_ptr);
-	if (data->mlx_ptr)
+	if (data->mlx_ptr != NULL)
 	{
 		mlx_destroy_display(data->mlx_ptr);
 		free(data->mlx_ptr);
@@ -58,6 +58,7 @@ int	main(int argc, char **argv)
 {
 	t_data	data;
 
+	memset(&data, 0, sizeof(t_data));
 	if (argc != 2)
 	{
 		print_error("Uso: ./cub3D <archivo.cub>");
