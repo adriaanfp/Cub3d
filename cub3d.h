@@ -58,4 +58,11 @@ int		parse_file(char *filename, t_data *data);
 void	free_map(t_map *map);
 void	print_error(char *message);
 
+/* Funciones auxiliares de string */
+int		ft_strlen(char *str);
+char	*ft_strdup(char *str);
+char	*ft_strtrim(char *str);
+int		ft_strncmp(char *s1, char *s2, int n);
+char	*get_next_line(int fd);
+
 #endif

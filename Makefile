@@ -17,7 +17,8 @@ CFLAGS		= -Wall -Wextra -Werror -std=gnu17
 INCLUDES	= -I. -I./minilibx
 
 SRCS		= main.c \
-			  parsing.c
+			  parsing.c \
+			  utils.c
 
 OBJS		= $(SRCS:.c=.o)
 
