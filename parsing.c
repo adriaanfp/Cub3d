@@ -144,19 +144,25 @@ static int	parse_color_value(char *str)
 
 	r = 0;
 	i = 0;
+	if (str[i] < '0' || str[i] > '9')
+		return (-1);
 	while (str[i] >= '0' && str[i] <= '9')
 		r = r * 10 + (str[i++] - '0');
-	if (str[i++] != ',' || r > 255)
+	if (str[i++] != ',' || r > 255 || r < 0)
 		return (-1);
 	g = 0;
+	if (str[i] < '0' || str[i] > '9')
+		return (-1);
 	while (str[i] >= '0' && str[i] <= '9')
 		g = g * 10 + (str[i++] - '0');
-	if (str[i++] != ',' || g > 255)
+	if (str[i++] != ',' || g > 255 || g < 0)
 		return (-1);
 	b = 0;
+	if (str[i] < '0' || str[i] > '9')
+		return (-1);
 	while (str[i] >= '0' && str[i] <= '9')
 		b = b * 10 + (str[i++] - '0');
-	if (b > 255)
+	if (b > 255 || b < 0 || str[i] != '\0')
 		return (-1);
 	return ((r << 16) | (g << 8) | b);
 }
@@ -307,6 +313,35 @@ static int	parse_line(char *line, t_map *map)
 }
 
 /*
+** count_players - Cuenta el número de jugadores en el mapa
+** @map: Estructura del mapa
+**
+** Return: Número de jugadores encontrados
+*/
+static int	count_players(t_map *map)
+{
+	int	y;
+	int	x;
+	int	count;
+
+	count = 0;
+	y = 0;
+	while (y < map->height)
+	{
+		x = 0;
+		while (map->grid[y][x])
+		{
+			if (map->grid[y][x] == 'N' || map->grid[y][x] == 'S'
+				|| map->grid[y][x] == 'E' || map->grid[y][x] == 'W')
+				count++;
+			x++;
+		}
+		y++;
+	}
+	return (count);
+}
+
+/*
 ** init_player - Inicializa la posición y dirección del jugador
 ** @data: Estructura principal del juego
 **
@@ -316,7 +351,19 @@ int	init_player(t_data *data)
 {
 	int	y;
 	int	x;
+	int	player_count;
 
+	player_count = count_players(&data->map);
+	if (player_count == 0)
+	{
+		print_error("No se encontró jugador en el mapa");
+		return (1);
+	}
+	if (player_count > 1)
+	{
+		print_error("El mapa contiene más de un jugador");
+		return (1);
+	}
 	y = 0;
 	while (y < data->map.height)
 	{
@@ -356,14 +403,77 @@ int	init_player(t_data *data)
 					data->plane_x = 0;
 					data->plane_y = -0.66;
 				}
+				data->map.grid[y][x] = '0';
 				return (0);
 			}
 			x++;
 		}
 		y++;
 	}
-	print_error("No se encontró jugador en el mapa");
 	return (1);
+}
+
+/*
+** is_valid_map_char - Verifica si un carácter es válido en el mapa
+** @c: Carácter a verificar
+**
+** Return: 1 si es válido, 0 si no
+*/
+static int	is_valid_map_char(char c)
+{
+	return (c == '0' || c == '1' || c == 'N' || c == 'S'
+		|| c == 'E' || c == 'W' || c == ' ');
+}
+
+/*
+** check_map_walls - Verifica que el mapa esté cerrado por muros
+** @map: Estructura del mapa
+**
+** Return: 0 si es válido, 1 si hay error
+*/
+static int	check_map_walls(t_map *map)
+{
+	int	y;
+	int	x;
+
+	y = 0;
+	while (y < map->height)
+	{
+		x = 0;
+		while (map->grid[y][x])
+		{
+			if (!is_valid_map_char(map->grid[y][x]))
+			{
+				print_error("Carácter inválido en el mapa");
+				return (1);
+			}
+			if (map->grid[y][x] == '0' || map->grid[y][x] == 'N'
+				|| map->grid[y][x] == 'S' || map->grid[y][x] == 'E'
+				|| map->grid[y][x] == 'W')
+			{
+				if (y == 0 || y == map->height - 1)
+				{
+					print_error("El mapa no está cerrado por muros");
+					return (1);
+				}
+				if (x == 0 || !map->grid[y][x + 1])
+				{
+					print_error("El mapa no está cerrado por muros");
+					return (1);
+				}
+				if (map->grid[y - 1][x] == ' ' || map->grid[y + 1][x] == ' '
+					|| (x > 0 && map->grid[y][x - 1] == ' ')
+					|| map->grid[y][x + 1] == ' ')
+				{
+					print_error("El mapa no está cerrado por muros");
+					return (1);
+				}
+			}
+			x++;
+		}
+		y++;
+	}
+	return (0);
 }
 
 /*
@@ -390,6 +500,8 @@ static int	validate_config(t_map *map)
 		print_error("Falta el mapa en el archivo");
 		return (1);
 	}
+	if (check_map_walls(map))
+		return (1);
 	return (0);
 }
 
