@@ -14,10 +14,7 @@ NAME		= cub3D
 
 CC			= cc
 CFLAGS		= -Wall -Wextra -Werror -std=gnu17
-INCLUDES	= -I includes -I./minilibx
-
-SRC_DIR		= src
-OBJ_DIR		= obj
+INCLUDES	= -I. -I./minilibx
 
 SRCS		= main.c \
 			  events.c \
@@ -35,7 +32,7 @@ SRCS		= main.c \
 			  utils.c \
 			  get_next_line.c
 
-OBJS		= $(SRCS:%.c=$(OBJ_DIR)/%.o)
+OBJS		= $(SRCS:.c=.o)
 
 MLX_DIR		= ./minilibx
 MLX_LIB		= $(MLX_DIR)/libmlx.a
@@ -46,17 +43,14 @@ all: $(MLX_LIB) $(NAME)
 $(MLX_LIB):
 	@make -C $(MLX_DIR)
 
-$(OBJ_DIR):
-	@mkdir -p $(OBJ_DIR)
-
-$(OBJ_DIR)/%.o: $(SRC_DIR)/%.c includes/cub3d.h | $(OBJ_DIR)
+%.o: %.c cub3d.h
 	$(CC) $(CFLAGS) $(INCLUDES) -c $< -o $@
 
 $(NAME): $(OBJS)
 	$(CC) $(CFLAGS) $(OBJS) $(MLX_FLAGS) -o $(NAME)
 
 clean:
-	rm -rf $(OBJ_DIR)
+	rm -f $(OBJS)
 	@make -C $(MLX_DIR) clean
 
 fclean: clean
