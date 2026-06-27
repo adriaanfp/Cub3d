@@ -1,12 +1,13 @@
-NO ./textures/north.xpm
-NO ./path_falso_al_norte.xpm
-SO ./path_falso_al_sur.xpm
-WE ./path_falso_al_oeste.xpm
-EA ./path_falso_al_este.xpm
+NO ./minilibx/test/textures/test_north.xpm
+SO ./minilibx/test/textures/test_south.xpm
+WE ./minilibx/test/textures/test_west.xpm
+EA ./minilibx/test/textures/test_east.xpm
 
 F 220,100,0
 C 135,206,235
 
-111
-101
-111
+11111
+10001
+10N01
+10001
+11111
