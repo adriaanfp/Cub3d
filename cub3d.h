@@ -148,4 +148,9 @@ char	*ft_strtrim(char *str);
 int		ft_strncmp(char *s1, char *s2, int n);
 char	*get_next_line(int fd);
 
+int		init_game(t_data *data, char *file);
+int		init_mlx(t_data *data);
+void	init_hooks(t_data *data);
+void	cleanup(t_data *data);
+
 #endif
