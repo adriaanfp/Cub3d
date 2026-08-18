@@ -3,133 +3,114 @@
 /*                                                        :::      ::::::::   */
 /*   raycasting.c                                       :+:      :+:    :+:   */
 /*                                                    +:+ +:+         +:+     */
-/*   By: cub3d                                      +#+  +:+       +#+        */
+/*   By: jugarcia <jugarcia@student.42madrid.com    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
-/*   Created: 2026/06/27                               #+#    #+#             */
-/*   Updated: 2026/06/27                              ###   ########.fr       */
+/*   Created: 2026/06/27 00:00:00 by                   #+#    #+#             */
+/*   Updated: 2026/08/18 11:23:03 by jugarcia         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
 #include "cub3d.h"
 
-static int	perform_dda(t_data *data, int *map_x, int *map_y,
-	int step_x, int step_y, double *side_dist_x, double *side_dist_y,
-	double delta_dist_x, double delta_dist_y)
+static void	init_ray(t_data *data, int x, t_ray *ray)
+{
+	calculate_ray_direction(data, x, &ray->dir_x, &ray->dir_y);
+	ray->map_x = (int)data->pos_x;
+	ray->map_y = (int)data->pos_y;
+}
+
+static void	init_delta_dist(t_ray *ray)
+{
+	if (ray->dir_x == 0)
+		ray->delta_x = 1e30;
+	else
+		ray->delta_x = 1.0 / ray->dir_x;
+	if (ray->delta_x < 0)
+		ray->delta_x = -ray->delta_x;
+	if (ray->dir_y == 0)
+		ray->delta_y = 1e30;
+	else
+		ray->delta_y = 1.0 / ray->dir_y;
+	if (ray->delta_y < 0)
+		ray->delta_y = -ray->delta_y;
+}
+
+static void	init_step_side(t_data *data, t_ray *ray)
+{
+	if (ray->dir_x < 0)
+	{
+		ray->step_x = -1;
+		ray->side_x = (data->pos_x - ray->map_x) * ray->delta_x;
+	}
+	else
+	{
+		ray->step_x = 1;
+		ray->side_x = (ray->map_x + 1.0 - data->pos_x) * ray->delta_x;
+	}
+	if (ray->dir_y < 0)
+	{
+		ray->step_y = -1;
+		ray->side_y = (data->pos_y - ray->map_y) * ray->delta_y;
+	}
+	else
+	{
+		ray->step_y = 1;
+		ray->side_y = (ray->map_y + 1.0 - data->pos_y) * ray->delta_y;
+	}
+}
+
+static int	is_wall_hit(t_data *data, t_ray *ray)
+{
+	if (ray->map_x < 0 || ray->map_x >= data->map.width
+		|| ray->map_y < 0 || ray->map_y >= data->map.height)
+		return (1);
+	return (data->map.grid[ray->map_y][ray->map_x] == '1');
+}
+
+static void	perform_dda(t_data *data, t_ray *ray)
 {
 	int	hit;
-	int	side;
 
 	hit = 0;
-	side = 0;
+	ray->side = 0;
 	while (hit == 0)
 	{
-		if (*side_dist_x < *side_dist_y)
+		if (ray->side_x < ray->side_y)
 		{
-			*side_dist_x += delta_dist_x;
-			*map_x += step_x;
-			side = 0;
+			ray->side_x += ray->delta_x;
+			ray->map_x += ray->step_x;
+			ray->side = 0;
 		}
 		else
 		{
-			*side_dist_y += delta_dist_y;
-			*map_y += step_y;
-			side = 1;
+			ray->side_y += ray->delta_y;
+			ray->map_y += ray->step_y;
+			ray->side = 1;
 		}
-		if (*map_x >= 0 && *map_x < data->map.width
-			&& *map_y >= 0 && *map_y < data->map.height)
-		{
-			if (data->map.grid[*map_y][*map_x] == '1')
-				hit = 1;
-		}
-		else
-			hit = 1;
-	}
-	return (side);
-}
-
-static void	init_ray_params(t_data *data, double ray_dir_x, double ray_dir_y,
-	double *delta_dist_x, double *delta_dist_y)
-{
-	(void)data;
-	*delta_dist_x = (ray_dir_x == 0) ? 1e30 : (1.0 / ray_dir_x);
-	if (*delta_dist_x < 0)
-		*delta_dist_x = -*delta_dist_x;
-	*delta_dist_y = (ray_dir_y == 0) ? 1e30 : (1.0 / ray_dir_y);
-	if (*delta_dist_y < 0)
-		*delta_dist_y = -*delta_dist_y;
-}
-
-static void	init_step_and_side_dist(t_data *data, double ray_dir_x,
-	double ray_dir_y, int *step_x, int *step_y, double *side_dist_x,
-	double *side_dist_y, double delta_dist_x, double delta_dist_y, int map_x,
-	int map_y)
-{
-	if (ray_dir_x < 0)
-	{
-		*step_x = -1;
-		*side_dist_x = (data->pos_x - map_x) * delta_dist_x;
-	}
-	else
-	{
-		*step_x = 1;
-		*side_dist_x = (map_x + 1.0 - data->pos_x) * delta_dist_x;
-	}
-	if (ray_dir_y < 0)
-	{
-		*step_y = -1;
-		*side_dist_y = (data->pos_y - map_y) * delta_dist_y;
-	}
-	else
-	{
-		*step_y = 1;
-		*side_dist_y = (map_y + 1.0 - data->pos_y) * delta_dist_y;
+		hit = is_wall_hit(data, ray);
 	}
 }
 
-static double	calculate_perp_wall_dist(t_data *data, int side, int map_x,
-	int map_y, int step_x, int step_y, double ray_dir_x, double ray_dir_y)
+static void	finalize_ray(t_data *data, t_ray *ray)
 {
-	double	perp_wall_dist;
-
-	if (side == 0)
-		perp_wall_dist = (map_x - data->pos_x + (1 - step_x) / 2) / ray_dir_x;
+	if (ray->side == 0)
+		ray->wall_dist = (ray->map_x - data->pos_x
+				+ (1 - ray->step_x) / 2) / ray->dir_x;
 	else
-		perp_wall_dist = (map_y - data->pos_y + (1 - step_y) / 2) / ray_dir_y;
-	return (perp_wall_dist);
+		ray->wall_dist = (ray->map_y - data->pos_y
+				+ (1 - ray->step_y) / 2) / ray->dir_y;
+	if (ray->side == 0)
+		ray->wall_x = data->pos_y + ray->wall_dist * ray->dir_y;
+	else
+		ray->wall_x = data->pos_x + ray->wall_dist * ray->dir_x;
+	ray->wall_x -= (int)ray->wall_x;
 }
 
-double	cast_ray(t_data *data, int x, double *params)
+void	cast_ray(t_data *data, int x, t_ray *ray)
 {
-	double	ray_dir_x;
-	double	ray_dir_y;
-	int		map_x;
-	int		map_y;
-	double	delta_dist_x;
-	double	delta_dist_y;
-	double	side_dist_x;
-	double	side_dist_y;
-	int		step_x;
-	int		step_y;
-	double	perp_wall_dist;
-	double	wall_x;
-
-	calculate_ray_direction(data, x, &ray_dir_x, &ray_dir_y);
-	map_x = (int)data->pos_x;
-	map_y = (int)data->pos_y;
-	init_ray_params(data, ray_dir_x, ray_dir_y, &delta_dist_x, &delta_dist_y);
-	init_step_and_side_dist(data, ray_dir_x, ray_dir_y, &step_x, &step_y,
-		&side_dist_x, &side_dist_y, delta_dist_x, delta_dist_y, map_x, map_y);
-	params[0] = perform_dda(data, &map_x, &map_y, step_x, step_y,
-			&side_dist_x, &side_dist_y, delta_dist_x, delta_dist_y);
-	perp_wall_dist = calculate_perp_wall_dist(data, (int)params[0], map_x,
-			map_y, step_x, step_y, ray_dir_x, ray_dir_y);
-	if ((int)params[0] == 0)
-		wall_x = data->pos_y + perp_wall_dist * ray_dir_y;
-	else
-		wall_x = data->pos_x + perp_wall_dist * ray_dir_x;
-	wall_x -= (int)wall_x;
-	params[1] = wall_x;
-	params[2] = ray_dir_x;
-	params[3] = ray_dir_y;
-	return (perp_wall_dist);
+	init_ray(data, x, ray);
+	init_delta_dist(ray);
+	init_step_side(data, ray);
+	perform_dda(data, ray);
+	finalize_ray(data, ray);
 }
