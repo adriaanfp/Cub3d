@@ -188,4 +188,7 @@ int		init_mlx(t_data *data);
 void	init_hooks(t_data *data);
 void	cleanup(t_data *data);
 
+void	init_ray(t_data *data, int x, t_ray *ray);
+void	init_delta_dist(t_ray *ray);
+
 #endif
