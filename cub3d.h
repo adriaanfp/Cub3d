@@ -3,10 +3,10 @@
 /*                                                        :::      ::::::::   */
 /*   cub3d.h                                            :+:      :+:    :+:   */
 /*                                                    +:+ +:+         +:+     */
-/*   By: cub3d                                      +#+  +:+       +#+        */
+/*   By: jugarcia <jugarcia@student.42madrid.com    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
-/*   Created: 2026/06/27                               #+#    #+#             */
-/*   Updated: 2026/06/27                              ###   ########.fr       */
+/*   Created: 2026/06/27 00:00:00 by                   #+#    #+#             */
+/*   Updated: 2026/08/18 11:22:31 by jugarcia         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -97,6 +97,42 @@ typedef struct s_data
 	int			key_right;
 }	t_data;
 
+typedef struct s_ray
+{
+	double		dir_x;
+	double		dir_y;
+	int			map_x;
+	int			map_y;
+	double		delta_x;
+	double		delta_y;
+	double		side_x;
+	double		side_y;
+	int			step_x;
+	int			step_y;
+	int			side;
+	double		wall_dist;
+	double		wall_x;
+}	t_ray;
+
+typedef struct s_wall
+{
+	int			side;
+	double		wall_x;
+	double		ray_dir_x;
+	double		ray_dir_y;
+	int			line_height;
+	int			draw_start;
+	int			draw_end;
+}	t_wall;
+
+typedef struct s_texdraw
+{
+	t_texture	*tex;
+	int			tex_x;
+	double		step;
+	double		tex_pos;
+}	t_texdraw;
+
 /* Funciones de cierre y eventos */
 int		close_window(t_data *data);
 int		key_press(int keycode, t_data *data);
@@ -136,10 +172,9 @@ t_texture	*select_texture(t_data *data, int side, double ray_dir_x,
 void	draw_background(t_data *data);
 void	calculate_ray_direction(t_data *data, int x,
 			double *ray_dir_x, double *ray_dir_y);
-void	draw_wall_column(t_data *data, int x, int draw_start,
-			int draw_end, double *params);
+void	draw_wall_column(t_data *data, int x, t_wall *wall);
 void	render_walls(t_data *data);
-double	cast_ray(t_data *data, int x, double *params);
+void	cast_ray(t_data *data, int x, t_ray *ray);
 
 /* Funciones auxiliares de string */
 int		ft_strlen(char *str);
