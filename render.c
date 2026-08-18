@@ -3,10 +3,10 @@
 /*                                                        :::      ::::::::   */
 /*   render.c                                           :+:      :+:    :+:   */
 /*                                                    +:+ +:+         +:+     */
-/*   By: cub3d                                      +#+  +:+       +#+        */
+/*   By: jugarcia <jugarcia@student.42madrid.com    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
-/*   Created: 2026/06/27                               #+#    #+#             */
-/*   Updated: 2026/06/27                              ###   ########.fr       */
+/*   Created: 2026/06/27 00:00:00 by                   #+#    #+#             */
+/*   Updated: 2026/08/18 11:24:20 by jugarcia         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -22,67 +22,86 @@ void	calculate_ray_direction(t_data *data, int x,
 	*ray_dir_y = data->dir_y + data->plane_y * camera_x;
 }
 
-void	draw_wall_column(t_data *data, int x, int draw_start,
-	int draw_end, double *params)
+static int	get_tex_x(t_texture *tex, t_wall *wall)
 {
-	int			y;
-	int			tex_x;
-	int			tex_y;
-	double		step;
-	double		tex_pos;
-	t_texture	*tex;
-	int			color;
+	int	tex_x;
 
-	tex = select_texture(data, (int)params[0], params[3], params[4]);
-	if (!tex || !tex->addr)
-		return ;
-	tex_x = (int)(params[2] * (double)tex->width);
+	tex_x = (int)(wall->wall_x * (double)tex->width);
 	if (tex_x < 0)
 		tex_x = 0;
 	if (tex_x >= tex->width)
 		tex_x = tex->width - 1;
-	if ((params[0] == 0 && params[3] > 0) || (params[0] == 1 && params[4] < 0))
+	if ((wall->side == 0 && wall->ray_dir_x > 0)
+		|| (wall->side == 1 && wall->ray_dir_y < 0))
 		tex_x = tex->width - tex_x - 1;
-	step = 1.0 * tex->height / params[1];
-	tex_pos = (draw_start - WIN_HEIGHT / 2 + params[1] / 2) * step;
-	y = draw_start;
-	while (y < draw_end)
+	return (tex_x);
+}
+
+static void	draw_tex_column(t_data *data, int x, t_wall *wall, t_texdraw *td)
+{
+	int	y;
+	int	tex_y;
+	int	color;
+
+	y = wall->draw_start;
+	while (y < wall->draw_end)
 	{
-		tex_y = (int)tex_pos;
+		tex_y = (int)td->tex_pos;
 		if (tex_y < 0)
 			tex_y = 0;
-		if (tex_y >= tex->height)
-			tex_y = tex->height - 1;
-		tex_pos += step;
-		color = get_texture_color(tex, tex_x, tex_y);
+		if (tex_y >= td->tex->height)
+			tex_y = td->tex->height - 1;
+		td->tex_pos += td->step;
+		color = get_texture_color(td->tex, td->tex_x, tex_y);
 		if (color != 0)
 			my_mlx_pixel_put(data, x, y, color);
 		y++;
 	}
 }
 
+void	draw_wall_column(t_data *data, int x, t_wall *wall)
+{
+	t_texture	*tex;
+	t_texdraw	td;
+
+	tex = select_texture(data, wall->side, wall->ray_dir_x, wall->ray_dir_y);
+	if (!tex || !tex->addr)
+		return ;
+	td.tex = tex;
+	td.tex_x = get_tex_x(tex, wall);
+	td.step = 1.0 * tex->height / wall->line_height;
+	td.tex_pos = (wall->draw_start - WIN_HEIGHT / 2
+			+ wall->line_height / 2) * td.step;
+	draw_tex_column(data, x, wall, &td);
+}
+
+static void	build_wall(t_ray *ray, t_wall *wall)
+{
+	wall->line_height = (int)(WIN_HEIGHT / ray->wall_dist);
+	wall->side = ray->side;
+	wall->wall_x = ray->wall_x;
+	wall->ray_dir_x = ray->dir_x;
+	wall->ray_dir_y = ray->dir_y;
+	wall->draw_start = -wall->line_height / 2 + WIN_HEIGHT / 2;
+	if (wall->draw_start < 0)
+		wall->draw_start = 0;
+	wall->draw_end = wall->line_height / 2 + WIN_HEIGHT / 2;
+	if (wall->draw_end >= WIN_HEIGHT)
+		wall->draw_end = WIN_HEIGHT - 1;
+}
+
 void	render_walls(t_data *data)
 {
 	int		x;
-	double	perp_wall_dist;
-	int		line_height;
-	int		draw_start;
-	int		draw_end;
-	double	params[5];
+	t_ray	ray;
+	t_wall	wall;
 
 	x = 0;
 	while (x < WIN_WIDTH)
 	{
-		perp_wall_dist = cast_ray(data, x, params);
-		line_height = (int)(WIN_HEIGHT / perp_wall_dist);
-		draw_start = -line_height / 2 + WIN_HEIGHT / 2;
-		if (draw_start < 0)
-			draw_start = 0;
-		draw_end = line_height / 2 + WIN_HEIGHT / 2;
-		if (draw_end >= WIN_HEIGHT)
-			draw_end = WIN_HEIGHT - 1;
-		params[4] = line_height;
-		draw_wall_column(data, x, draw_start, draw_end, params);
+		cast_ray(data, x, &ray);
+		build_wall(&ray, &wall);
+		draw_wall_column(data, x, &wall);
 		x++;
 	}
 }
